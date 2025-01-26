@@ -23,4 +23,3 @@ const colors = {
   colors.lightShade = colors.hex('#333333');  // Very dark gray for subtle highlights
   
   module.exports = colors;
-  
