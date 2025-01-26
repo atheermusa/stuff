@@ -1,0 +1,9 @@
+{
+    "name": "animated-horse-cli",
+    "version": "1.0.0",
+    "description": "ASCII horse animation in the terminal",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js"
+    }
+  }
