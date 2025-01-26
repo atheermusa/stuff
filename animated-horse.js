@@ -1,101 +1,92 @@
 const fs = require('fs').promises;
 const path = require('path');
+const colors = require('./colors');
 
 class HorseAnimator {
   constructor() {
     this.frames = [];
-    this.originalHorse = '';
+    this.logo = '';
   }
 
-  async loadHorse() {
+  async loadLogo() {
     try {
-      this.originalHorse = await fs.readFile(path.join(__dirname, 'horse.txt'), 'utf8');
-      this.createFrames();
+      const logoContent = await fs.readFile(path.join(__dirname, 'logo.txt'), 'utf8');
+      this.logo = this.colorizeLogo(logoContent);
     } catch (error) {
-      console.error('Error loading horse ASCII art:', error);
+      console.error('Error loading logo:', error);
       process.exit(1);
     }
   }
 
-  colorize(text) {
-    // Define colors inline for simplicity during testing
-    const black = '\x1b[38;2;0;0;0m';
-    const bgGreen = '\x1b[48;2;76;215;131m';
-    const lightShade = '\x1b[38;2;51;51;51m';
-    const reset = '\x1b[0m';
-
-    return text
-      .replace(/@/g, `${black}█${reset}`)
-      .replace(/#/g, `${black}█${reset}`)
-      .replace(/%/g, `${lightShade}█${reset}`)
-      .replace(/\*/g, `${bgGreen} ${reset}`);
+  async loadFrames() {
+    try {
+      // Load all 9 horse frames
+      const frames = await Promise.all(
+        Array.from({ length: 9 }, (_, i) => i + 1).map(async (num) => {
+          const content = await fs.readFile(path.join(__dirname, `horse${num}.txt`), 'utf8');
+          return this.colorizeHorse(content);
+        })
+      );
+      this.frames = frames;
+    } catch (error) {
+      console.error('Error loading horse frames:', error);
+      process.exit(1);
+    }
   }
 
-  createFrames() {
-    const baseFrame = this.originalHorse.split('\n');
-    
-    // Frame 1: Back legs gathered, front legs extended
-    const frame1 = baseFrame.map((line, index) => {
-      // Clear back legs
-      if (index === 21 || index === 22) {
-        return line.replace(/[@#%]/g, ' ');
-      }
-      return line;
-    });
-    
-    // Frame 2: All legs gathered
-    const frame2 = baseFrame.map((line, index) => {
-      // Clear all leg positions
-      if (index >= 21 && index <= 24) {
-        return line.replace(/[@#%]/g, ' ');
-      }
-      return line;
-    });
-    
-    // Frame 3: Back legs extended, front legs gathered
-    const frame3 = baseFrame.map((line, index) => {
-      // Clear front legs
-      if (index === 23 || index === 24) {
-        return line.replace(/[@#%]/g, ' ');
-      }
-      return line;
-    });
-    
-    // Frame 4: Return to starting position for smooth loop
-    const frame4 = [...frame1];
+  colorizeHorse(text) {
+    return text
+      .replace(/\./g, `${colors.bgWhite} ${colors.reset}`)  // White background
+      .replace(/=/g, `${colors.darkGreen}█${colors.reset}`) // Dark green accent stripe
+      .replace(/[@#%\-+:*]/g, `${colors.black}█${colors.reset}`); // Black silhouette
+  }
 
-    // Apply colors to each frame
-    this.frames = [
-      this.colorize(frame1.join('\n')),
-      this.colorize(frame2.join('\n')),
-      this.colorize(frame3.join('\n')),
-      this.colorize(frame4.join('\n'))
-    ];
-
-    // Log first frame for debugging
-    console.log("Frame 1 preview:");
-    console.log(this.frames[0]);
+  colorizeLogo(text) {
+    return text
+      .replace(/\./g, ' ')  // Background spaces
+      .replace(/\[|\]/g, str => `${colors.darkGreen}${str}${colors.reset}`)  // Brackets in green
+      .replace(/={2,}/g, str => `${colors.darkGreen}${str}${colors.reset}`)  // Equals in green
+      .replace(/-{2,}/g, str => `${colors.darkGreen}${str}${colors.reset}`)  // Hyphens in green
+      .replace(/CANCARA|DESIGN SYSTEM CLI/g, str => `${colors.black}${str}${colors.reset}`);  // Text in black
   }
 
   clearConsole() {
-    process.stdout.write('\x1Bc');
+    // Use alternative screen buffer
+    process.stdout.write('\x1b[?1049h');
+    // Move cursor to top-left
+    process.stdout.write('\x1b[H');
   }
 
-  async startAnimation(speed = 400) {  // Much slower animation
-    await this.loadHorse();
+  cleanup() {
+    // Return to main screen buffer
+    process.stdout.write('\x1b[?1049l');
+  }
+
+  async startAnimation(speed = 100) {
+    await Promise.all([this.loadFrames(), this.loadLogo()]);
     let frameIndex = 0;
     
     console.log('Press Ctrl+C to exit');
     
-    // Add short delay before starting animation
-    setTimeout(() => {
-      const interval = setInterval(() => {
-        this.clearConsole();
-        process.stdout.write(this.frames[frameIndex]);
-        process.stdout.write(`\n\nFrame ${frameIndex + 1} of ${this.frames.length}`);  // Debug info
-        frameIndex = (frameIndex + 1) % this.frames.length;
-      }, speed);
-    }, 1000);
+    // Switch to alternative screen buffer at start
+    process.stdout.write('\x1b[?1049h');
+    
+    // Handle cleanup on exit
+    const cleanup = () => {
+      this.cleanup();
+      process.exit(0);
+    };
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    
+    setInterval(() => {
+      // Just move cursor to top instead of clearing
+      process.stdout.write('\x1b[H');
+      // Build entire frame in memory before writing
+      const frame = this.frames[frameIndex] + '\n' + this.logo;
+      process.stdout.write(frame);
+      frameIndex = (frameIndex + 1) % this.frames.length;
+    }, speed);
   }
 }
 
