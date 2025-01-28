@@ -1,9 +1,16 @@
 {
     "name": "animated-horse-cli",
     "version": "1.0.0",
-    "description": "ASCII horse animation in the terminal",
+    "description": "Interactive CLI with animated horse",
     "main": "index.js",
+    "bin": {
+        "horse-cli": "./index.js"
+    },
     "scripts": {
-      "start": "node index.js"
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "commander": "^13.1.0",
+        "inquirer": "^8.2.5"
     }
-  }
+}

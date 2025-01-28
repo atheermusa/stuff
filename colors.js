@@ -17,6 +17,6 @@ const colors = {
   // Define our exact colors from the image
   colors.black = colors.hex('#000000');      // Pure black for the silhouette
   colors.darkGreen = colors.hex('#2B614D');  // Dark green for the accent stripe
-  colors.bgWhite = colors.bgHex('#4CD783');  // White background
+  colors.bgGreen = colors.bgHex('#4CD783');  // White background
   
   module.exports = colors;
